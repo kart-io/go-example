@@ -66,8 +66,7 @@ func advancedConfiguration() {
     DisableCaller:     false,
     DisableStacktrace: true,
     OTLP: &option.OTLPOption{
-        ServiceName:       "my-microservice",
-        ServiceVersion:    "v1.2.3",
+        // ServiceName and ServiceVersion handled via -ldflags injection
     },
 }`)
 	fmt.Println("```")
@@ -94,8 +93,7 @@ logOption := &option.LogOption{
     // OTLP configuration for centralized logging
     OTLPEndpoint: "http://otel-collector:4317",
     OTLP: &option.OTLPOption{
-        ServiceName:       "production-service",
-        ServiceVersion:    version.Get().GitVersion,
+        // ServiceName and ServiceVersion handled via -ldflags injection
     },
 }`)
 	fmt.Println("```")

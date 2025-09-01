@@ -60,9 +60,13 @@ func singleFileDemo(versionInfo version.Info) {
 		Level:       "info",
 		Format:      "json",
 		OutputPaths: []string{logFile},
+		// Add service info as initial fields
+		InitialFields: map[string]interface{}{
+			"service.name":    versionInfo.ServiceName,
+			"service.version": versionInfo.GitVersion,
+		},
 		OTLP: &option.OTLPOption{
-			ServiceName:    versionInfo.ServiceName,
-			ServiceVersion: versionInfo.GitVersion,
+			// Basic OTLP configuration
 		},
 	}
 
@@ -100,17 +104,20 @@ func multipleOutputDemo(versionInfo version.Info) {
 		Format:      "console",
 		OutputPaths: []string{"stdout", logFile},
 		OTLP: &option.OTLPOption{
-			ServiceName:    versionInfo.ServiceName,
-			ServiceVersion: versionInfo.GitVersion,
+			// ServiceName and ServiceVersion removed - handled via -ldflags injection
 		},
 	}
 
-	logger, err := logger.New(logOption)
+	coreLogger, err := logger.New(logOption)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create logger: %v", err))
 	}
 
-	// Create a service-specific logger
+	// Create a service-specific logger with service info
+	logger := coreLogger.With(
+		"service.name", versionInfo.ServiceName,
+		"service.version", versionInfo.GitVersion,
+	)
 	serviceLogger := logger.With(
 		"component", "payment-service",
 		"environment", "production",
@@ -139,15 +146,20 @@ func levelBasedDemo(versionInfo version.Info) {
 		Format:      "json",
 		OutputPaths: []string{infoLogFile},
 		OTLP: &option.OTLPOption{
-			ServiceName:    versionInfo.ServiceName,
-			ServiceVersion: versionInfo.GitVersion,
+			// ServiceName and ServiceVersion removed - handled via -ldflags injection
 		},
 	}
 
-	infoLogger, err := logger.New(infoOption)
+	coreInfoLogger, err := logger.New(infoOption)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create info logger: %v", err))
 	}
+
+	// Add service info
+	infoLogger := coreInfoLogger.With(
+		"service.name", versionInfo.ServiceName,
+		"service.version", versionInfo.GitVersion,
+	)
 
 	// Error level logger (error and above)
 	errorOption := &option.LogOption{
@@ -156,15 +168,20 @@ func levelBasedDemo(versionInfo version.Info) {
 		Format:      "json",
 		OutputPaths: []string{errorLogFile},
 		OTLP: &option.OTLPOption{
-			ServiceName:    versionInfo.ServiceName,
-			ServiceVersion: versionInfo.GitVersion,
+			// ServiceName and ServiceVersion removed - handled via -ldflags injection
 		},
 	}
 
-	errorLogger, err := logger.New(errorOption)
+	coreErrorLogger, err := logger.New(errorOption)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create error logger: %v", err))
 	}
+
+	// Add service info
+	errorLogger := coreErrorLogger.With(
+		"service.name", versionInfo.ServiceName,
+		"service.version", versionInfo.GitVersion,
+	)
 
 	// Log different levels
 	infoLogger.Info("Application started successfully")
@@ -190,15 +207,20 @@ func fileRotationDemo(versionInfo version.Info) {
 		Format:      "json",
 		OutputPaths: []string{logFile},
 		OTLP: &option.OTLPOption{
-			ServiceName:    versionInfo.ServiceName,
-			ServiceVersion: versionInfo.GitVersion,
+			// ServiceName and ServiceVersion removed - handled via -ldflags injection
 		},
 	}
 
-	logger, err := logger.New(logOption)
+	coreLogger, err := logger.New(logOption)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create logger: %v", err))
 	}
+
+	// Add service info
+	logger := coreLogger.With(
+		"service.name", versionInfo.ServiceName,
+		"service.version", versionInfo.GitVersion,
+	)
 
 	// Simulate some business operations
 	operations := []string{
@@ -234,15 +256,20 @@ func webServerDemo(versionInfo version.Info) {
 		Format:      "json",
 		OutputPaths: []string{accessLogFile},
 		OTLP: &option.OTLPOption{
-			ServiceName:    versionInfo.ServiceName,
-			ServiceVersion: versionInfo.GitVersion,
+			// ServiceName and ServiceVersion removed - handled via -ldflags injection
 		},
 	}
 
-	accessLogger, err := logger.New(accessLogOption)
+	coreAccessLogger, err := logger.New(accessLogOption)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create access logger: %v", err))
 	}
+
+	// Add service info
+	accessLogger := coreAccessLogger.With(
+		"service.name", versionInfo.ServiceName,
+		"service.version", versionInfo.GitVersion,
+	)
 
 	// Application logger (console + file for development)
 	appLogOption := &option.LogOption{
@@ -251,15 +278,20 @@ func webServerDemo(versionInfo version.Info) {
 		Format:      "console",
 		OutputPaths: []string{"stdout", appLogFile},
 		OTLP: &option.OTLPOption{
-			ServiceName:    versionInfo.ServiceName,
-			ServiceVersion: versionInfo.GitVersion,
+			// ServiceName and ServiceVersion removed - handled via -ldflags injection
 		},
 	}
 
-	appLogger, err := logger.New(appLogOption)
+	coreAppLogger, err := logger.New(appLogOption)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create app logger: %v", err))
 	}
+
+	// Add service info
+	appLogger := coreAppLogger.With(
+		"service.name", versionInfo.ServiceName,
+		"service.version", versionInfo.GitVersion,
+	)
 
 	// Create loggers with context
 	accessLoggerWithContext := accessLogger.With("component", "http-access")

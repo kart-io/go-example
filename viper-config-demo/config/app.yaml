@@ -21,16 +21,13 @@ logger:
   development: true           # Enable development mode
   disable_caller: false       # Disable caller information
   disable_stacktrace: false   # Disable stack trace
-  
+
   # Output paths - where logs should be written
   output_paths:
     - "stdout"                # Console output
     - "logs/app.log"          # File output
-  
-  # Service information for OTLP
-  service_name: "viper-config-api"
-  service_version: "v1.0.0"
-  
+
+
   # OTLP (OpenTelemetry) configuration - now part of logger
   otlp_endpoint: "localhost:4317"
   otlp:

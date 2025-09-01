@@ -60,34 +60,241 @@ make examples  # 查看配置示例
 - **Web访问日志**: HTTP请求和应用日志分离
 - **配置示例**: 生产和开发环境的最佳实践
 
+## InitialFields 详解
+
+`InitialFields` 是一个强大的功能，允许你在创建 logger 时定义一组字段，这些字段会自动包含在每个日志条目中。
+
+### 💡 **核心概念**
+- **一次定义，处处使用**: 在 `InitialFields` 中定义的字段会出现在每个日志条目中
+- **自动默认值**: `service.name` 和 `service.version` 如果未提供，会自动设为 "unknown"
+- **类型支持**: 支持所有 Go 基础类型和复杂类型
+- **优先级**: 运行时通过 `Infow()` 等方法添加的字段会覆盖同名的 InitialFields
+
+### 📊 **常见使用场景**
+
+#### **服务标识**
+```go
+InitialFields: map[string]interface{}{
+    "service.name":    "user-service",
+    "service.version": "v2.1.0",
+}
+```
+
+#### **环境信息**
+```go
+InitialFields: map[string]interface{}{
+    "environment": "production",
+    "region":      "us-west-2",
+    "datacenter":  "dc-1",
+    "cluster":     "prod-cluster",
+}
+```
+
+#### **团队和所有权**
+```go
+InitialFields: map[string]interface{}{
+    "team":        "platform",
+    "squad":       "api-team", 
+    "owner":       "john.doe@company.com",
+    "cost_center": "engineering",
+}
+```
+
+#### **技术上下文**
+```go
+InitialFields: map[string]interface{}{
+    "language":    "go",
+    "framework":   "gin", 
+    "port":        8080,
+    "go_version":  "1.21.0",
+    "debug_mode":  false,
+}
+```
+
+#### **业务上下文**
+```go
+InitialFields: map[string]interface{}{
+    "project":          "customer-portal",
+    "business_unit":    "sales",
+    "compliance_scope": "pci-dss",
+    "data_classification": "confidential",
+}
+```
+
+#### **监控和告警**
+```go
+InitialFields: map[string]interface{}{
+    "monitoring.team":      "sre",
+    "monitoring.runbook":   "https://runbooks.company.com/user-service",
+    "monitoring.dashboard": "https://grafana.company.com/d/user-service",
+    "alert_level":          "critical",
+}
+```
+
+### 🚀 **完整示例**
+```go
+// 真实生产环境的初始字段配置
+versionInfo := version.Get()
+logOption := &option.LogOption{
+    Engine:      "zap",
+    Level:       "info",
+    Format:      "json", 
+    OutputPaths: []string{"stdout", "logs/app.log"},
+    InitialFields: map[string]interface{}{
+        // === 必需的服务标识 ===
+        "service.name":    versionInfo.ServiceName,
+        "service.version": versionInfo.GitVersion,
+        
+        // === 环境上下文 ===
+        "environment": os.Getenv("ENVIRONMENT"),
+        "region":      os.Getenv("AWS_REGION"),
+        "az":          os.Getenv("AWS_AZ"),
+        
+        // === 容器/K8s 上下文 ===
+        "pod_name":   os.Getenv("POD_NAME"),
+        "node_name":  os.Getenv("NODE_NAME"),
+        "namespace":  os.Getenv("POD_NAMESPACE"),
+        
+        // === 应用上下文 ===
+        "build_date": versionInfo.BuildDate,
+        "commit":     versionInfo.GitCommit[:8],
+        "port":       8080,
+        
+        // === 团队信息 ===
+        "team":  "platform",
+        "owner": "platform-team@company.com",
+        
+        // === 自定义字段 ===
+        "feature_flags": map[string]bool{
+            "new_auth":      true,
+            "rate_limiting": false,
+        },
+    },
+}
+
+logger, _ := logger.New(logOption)
+
+// 每个日志条目都会包含上述所有字段
+logger.Infow("User login", "user_id", "12345")
+logger.Errorw("Database error", "error", "connection timeout")
+```
+
 ## 配置示例
 
 ### 基础文件日志配置
 ```go
+// 获取版本信息
+versionInfo := version.Get()
+
+// 创建带初始字段的日志器
 logOption := &option.LogOption{
     Engine:         "slog",
     Level:          "info", 
     Format:         "json",
     OutputPaths:    []string{"logs/app.log"},
-    ServiceName:    "my-service",
-    ServiceVersion: "v1.0.0",
+    // 初始字段会添加到每个日志条目中
+    // 如果不提供 service.name 和 service.version，将默认为 "unknown"
+    InitialFields: map[string]interface{}{
+        "service.name":    versionInfo.ServiceName,     // 构建时注入
+        "service.version": versionInfo.GitVersion,      // 构建时注入
+    },
 }
+
+serviceLogger, err := logger.New(logOption)
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+#### 默认值行为
+```go
+// 如果不设置 InitialFields，会自动添加默认值
+logOption := &option.LogOption{
+    Engine:      "slog",
+    Level:       "info",
+    Format:      "json",
+    OutputPaths: []string{"stdout"},
+    // 不设置 InitialFields
+}
+
+logger, _ := logger.New(logOption)
+logger.Info("Hello")
+// 输出会包含: "service.name":"unknown", "service.version":"unknown"
+```
+
+#### 自定义初始字段
+`InitialFields` 中的所有字段都会出现在每个日志条目中：
+```go
+logOption := &option.LogOption{
+    Engine:      "slog",
+    Level:       "info",
+    Format:      "json",
+    OutputPaths: []string{"stdout"},
+    InitialFields: map[string]interface{}{
+        "service.name":    "my-api",
+        "service.version": "v1.2.0",
+        "environment":     "production",
+        "region":          "us-west-2",
+        "team":           "platform",
+        "datacenter":     "dc-1",
+        "cost_center":    "engineering",
+        "debug_mode":     false,
+        "port":           8080,
+    },
+}
+
+logger, _ := logger.New(logOption)
+logger.Infow("User login", "user_id", "12345")
+
+// 输出将包含所有 InitialFields + 运行时字段:
+// {
+//   "service.name": "my-api",
+//   "service.version": "v1.2.0", 
+//   "environment": "production",
+//   "region": "us-west-2",
+//   "team": "platform",
+//   "datacenter": "dc-1",
+//   "cost_center": "engineering",
+//   "debug_mode": false,
+//   "port": 8080,
+//   "user_id": "12345",
+//   "msg": "User login",
+//   ...
+// }
 ```
 
 ### 生产环境配置
 ```go
+// 获取版本信息
+versionInfo := version.Get()
+
+// 生产环境日志器配置
 logOption := &option.LogOption{
     Engine:            "zap",              // 高性能
     Level:             "info",             // 适中日志级别
     Format:            "json",             // 结构化格式
     OutputPaths:       []string{"logs/prod.log"},
-    ServiceName:       versionInfo.ServiceName,
-    ServiceVersion:    versionInfo.GitVersion,
     Development:       false,              // 生产模式
     DisableCaller:     true,               // 提升性能
     DisableStacktrace: true,               // 减少日志大小
-    OTLPEndpoint:      "http://otel-collector:4317",
+    OTLPEndpoint:      "otel-collector:4317",  // gRPC端点
+    // 生产环境初始字段
+    InitialFields: map[string]interface{}{
+        "service.name":    versionInfo.ServiceName,
+        "service.version": versionInfo.GitVersion,
+        "commit":          versionInfo.GitCommit[:8],
+        "build_date":      versionInfo.BuildDate,
+        "environment":     "production",
+    },
 }
+
+serviceLogger, err := logger.New(logOption)
+if err != nil {
+    log.Fatal(err)
+}
+
+// 构建命令示例:
+// go build -ldflags "-X 'github.com/kart-io/version.serviceName=my-service' -X 'github.com/kart-io/version.gitVersion=v1.0.0'"
 ```
 
 ### 开发环境配置
@@ -108,13 +315,18 @@ logOption := &option.LogOption{
 ```go
 versionInfo := version.Get()
 
-// 在logger中使用版本信息
-serviceLogger := logger.With(
-    "service", versionInfo.ServiceName,
-    "version", versionInfo.GitVersion,
-    "commit", versionInfo.GitCommit[:8],
-    "build_date", versionInfo.BuildDate,
-)
+// 在logger创建时使用版本信息作为初始字段
+logOption := &option.LogOption{
+    // ... 其他配置 ...
+    InitialFields: map[string]interface{}{
+        "service.name":    versionInfo.ServiceName,      // 标准字段名
+        "service.version": versionInfo.GitVersion,       // 标准字段名
+        "commit":          versionInfo.GitCommit[:8],
+        "build_date":      versionInfo.BuildDate,
+    },
+}
+
+serviceLogger, err := logger.New(logOption)
 
 // 在API中暴露版本信息
 r.GET("/version", func(c *gin.Context) {
@@ -164,10 +376,23 @@ curl 'http://127.0.0.1:9428/select/logsql/query?query=*&limit=10'
 
 ### OTLP配置
 ```go
+// 获取版本信息
+versionInfo := version.Get()
+
+// OTLP配置 - 服务信息通过 InitialFields 添加
 logOption := &option.LogOption{
     // ... 其他配置 ...
     OTLPEndpoint: "localhost:4317",  // gRPC端点
+    InitialFields: map[string]interface{}{
+        "service.name":    versionInfo.ServiceName,
+        "service.version": versionInfo.GitVersion,
+    },
+    OTLP: &option.OTLPOption{
+        Enabled: &[]bool{true}[0],  // 显式启用
+    },
 }
+
+serviceLogger, _ := logger.New(logOption)
 ```
 
 系统会自动：

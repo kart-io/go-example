@@ -134,14 +134,132 @@ appLogOption := &option.LogOption{
 
 ### 1. 生产环境配置
 ```go
+// 获取版本信息
+versionInfo := version.Get()
+
+// 生产环境日志器配置
 logOption := &option.LogOption{
     Engine:         "zap",           // 高性能
     Level:          "info",          // 适中的日志级别
     Format:         "json",          // 结构化格式
     OutputPaths:    []string{"logs/app.log"},
-    ServiceName:    "my-service",
-    ServiceVersion: "v1.0.0",
+    // 初始字段添加服务信息
+    // 注意: 如果 service.name 或 service.version 未提供，将默认为 "unknown"
+    InitialFields: map[string]interface{}{
+        "service.name":    versionInfo.ServiceName,     // 构建时注入
+        "service.version": versionInfo.GitVersion,      // 构建时注入
+        "environment":     "production",
+    },
 }
+
+serviceLogger, err := logger.New(logOption)
+if err != nil {
+    log.Fatal(err)
+}
+```
+
+#### InitialFields 完整特性说明
+
+**核心概念**: `InitialFields` 中的**所有字段**都会包含在每个日志条目中，不仅仅是服务字段。
+
+**重要**: InitialFields 添加的任何字段都可以打印！支持的字段类型包括：
+- **字符串**: `"environment": "production"`
+- **数字**: `"port": 8080, "timeout": 30`
+- **布尔值**: `"debug_mode": false, "feature_enabled": true`
+- **数组/切片**: `"tags": ["api", "web"]`
+- **对象/映射**: `"config": {"key": "value"}`
+
+#### 默认值行为
+Logger 会自动确保以下字段始终存在：
+- `service.name`: 如果未在 `InitialFields` 中提供，默认为 `"unknown"`
+- `service.version`: 如果未在 `InitialFields` 中提供，默认为 `"unknown"`
+
+**所有其他在 `InitialFields` 中定义的字段都会原样包含在每个日志条目中**。
+
+#### 完整示例：多类型字段演示
+```go
+// 演示所有类型的 InitialFields 都会被打印
+logOption := &option.LogOption{
+    Engine:      "slog",
+    Level:       "info",
+    Format:      "json",
+    OutputPaths: []string{"stdout", "logs/comprehensive.log"},
+    InitialFields: map[string]interface{}{
+        // === 服务标识字段 ===
+        "service.name":    "my-api",
+        "service.version": "v1.2.0",
+        
+        // === 环境和部署信息 ===
+        "environment": "production",
+        "region":      "us-west-2",
+        "datacenter":  "dc-1",
+        "cluster":     "prod-cluster",
+        
+        // === 数值字段 ===
+        "port":            8080,
+        "timeout_seconds": 30,
+        "max_connections": 1000,
+        "worker_count":    4,
+        
+        // === 布尔字段 ===
+        "debug_mode":         false,
+        "feature_auth_v2":    true,
+        "cache_enabled":      true,
+        "rate_limiting":      false,
+        
+        // === 团队和所有权 ===
+        "team":         "platform",
+        "squad":        "api-team",
+        "owner":        "platform@company.com",
+        "cost_center":  "engineering",
+        
+        // === 数组/切片字段 ===
+        "tags":        []string{"api", "microservice", "critical"},
+        "endpoints":   []string{"/health", "/metrics", "/api/v1"},
+        "environments": []string{"staging", "production"},
+        
+        // === 嵌套对象/映射 ===
+        "monitoring": map[string]interface{}{
+            "dashboard": "https://grafana.company.com/my-api",
+            "runbook":   "https://wiki.company.com/runbooks/my-api",
+            "alerts":    true,
+        },
+        "feature_flags": map[string]bool{
+            "new_auth":      true,
+            "rate_limiting": false,
+            "caching":       true,
+        },
+        
+        // === 合规和治理 ===
+        "data_classification": "confidential",
+        "compliance_scope":    "pci-dss",
+        "retention_days":      90,
+    },
+}
+
+logger, _ := logger.New(logOption)
+
+// 每个日志条目都会包含上述所有字段！
+logger.Info("Application started")
+logger.Infow("User login", "user_id", "12345")
+logger.Errorw("Database error", "error", "timeout")
+
+// 输出示例（每个条目都包含所有 InitialFields）:
+// {
+//   "time": "2025-09-01T10:30:00Z",
+//   "level": "info", 
+//   "msg": "Application started",
+//   "service.name": "my-api",
+//   "service.version": "v1.2.0",
+//   "environment": "production",
+//   "region": "us-west-2",
+//   "port": 8080,
+//   "debug_mode": false,
+//   "team": "platform",
+//   "tags": ["api", "microservice", "critical"],
+//   "monitoring": {"dashboard": "https://grafana.company.com/my-api", ...},
+//   ... // 以及所有其他 InitialFields
+// }
 ```
 
 ### 2. 开发环境配置

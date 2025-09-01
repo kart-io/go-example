@@ -104,7 +104,7 @@ APP_SERVER_PORT=9000 ./bin/viper-config-demo
 APP_LOGGER_LEVEL=debug ./bin/viper-config-demo production.yaml
 
 # Override OTLP endpoint
-APP_OTLP_ENDPOINT=http://custom-collector:4317 ./bin/viper-config-demo
+APP_LOGGER_OTLP_ENDPOINT=custom-collector:4317 ./bin/viper-config-demo
 ```
 
 ## API Endpoints
@@ -159,19 +159,17 @@ logger:
   output_paths:
     - "stdout"
     - "logs/app.log"
-  service_name: "viper-config-api"
-  service_version: "v1.0.0"
-
-# OTLP configuration
-otlp:
-  enabled: true
-  endpoint: "localhost:4317"
-  protocol: "grpc"            # "grpc" or "http"
-  timeout: "10s"
-  insecure: true
-  headers:
-    x-api-key: "demo-key"
-    x-environment: "development"
+  otlp_endpoint: "localhost:4317"  # OTLP endpoint for OpenTelemetry export
+  otlp:
+    enabled: true
+    endpoint: "localhost:4317"
+    protocol: "grpc"            # "grpc" or "http"
+    timeout: "10s"
+    insecure: true
+    # service_name and service_version handled via -ldflags injection
+    headers:
+      x-api-key: "demo-key"
+      x-environment: "development"
 ```
 
 ### Environment Variable Mapping
@@ -183,8 +181,8 @@ Viper automatically maps environment variables with `APP_` prefix:
 | `APP_SERVER_PORT` | `server.port` |
 | `APP_LOGGER_ENGINE` | `logger.engine` |
 | `APP_LOGGER_LEVEL` | `logger.level` |
-| `APP_OTLP_ENABLED` | `otlp.enabled` |
-| `APP_OTLP_ENDPOINT` | `otlp.endpoint` |
+| `APP_LOGGER_OTLP_ENABLED` | `logger.otlp.enabled` |
+| `APP_LOGGER_OTLP_ENDPOINT` | `logger.otlp.endpoint` |
 
 ## Logger Integration
 
@@ -284,9 +282,9 @@ export APP_LOGGER_FORMAT="json"
 export APP_LOGGER_DEVELOPMENT="true"
 
 # OTLP configuration
-export APP_OTLP_ENABLED="true"
-export APP_OTLP_ENDPOINT="localhost:4317"
-export APP_OTLP_PROTOCOL="grpc"
+export APP_LOGGER_OTLP_ENABLED="true"
+export APP_LOGGER_OTLP_ENDPOINT="localhost:4317"
+export APP_LOGGER_OTLP_PROTOCOL="grpc"
 ```
 
 ### Runtime Environment Variables
@@ -325,13 +323,9 @@ if err != nil {
 // Get version information
 versionInfo := version.Get()
 
-// Override service info if available
-if versionInfo.ServiceName != "" {
-    logOption.ServiceName = versionInfo.ServiceName
-}
-if versionInfo.GitVersion != "" {
-    logOption.ServiceVersion = versionInfo.GitVersion
-}
+// Service info is automatically handled via version package
+// No manual override needed - service information is injected at build time
+// using -ldflags and retrieved from version.Get() in the logger initialization
 ```
 
 ## Best Practices
@@ -398,8 +392,8 @@ logger:
   level: "info"
   output_paths: ["stdout", "logs/custom.log"]
 
-otlp:
-  enabled: false
+  otlp:
+    enabled: false
 ```
 
 ```bash

@@ -107,15 +107,8 @@ func (cm *ConfigManager) ToLoggerOption() (*option.LogOption, error) {
 	
 	loggerConfig := &cm.config.Logger
 	
-	// Use service config as fallback for OTLP service info if empty
-	if loggerConfig.OTLP != nil {
-		if loggerConfig.OTLP.ServiceName == "" {
-			loggerConfig.OTLP.ServiceName = cm.config.Service.Name
-		}
-		if loggerConfig.OTLP.ServiceVersion == "" {
-			loggerConfig.OTLP.ServiceVersion = cm.config.Service.Version
-		}
-	}
+	// Service info is handled via version package and -ldflags injection
+	// No need to set OTLP service fields from config
 	
 	return loggerConfig, nil
 }

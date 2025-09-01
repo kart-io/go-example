@@ -21,16 +21,22 @@ func main() {
 		Level:       "info",
 		Format:      "json",
 		OutputPaths: []string{"stdout"},
+		// Add initial fields that should be in every log entry
+		InitialFields: map[string]interface{}{
+			"service.name":    versionInfo.ServiceName,   // Service name from build-time injection
+			"service.version": versionInfo.GitVersion,    // Version from build-time injection  
+			"commit":          versionInfo.GitCommit[:8], // Short commit hash
+			"build_date":      versionInfo.BuildDate,
+		},
 		// Smart OTLP configuration - will auto-enable if endpoint is available
 		OTLPEndpoint: "localhost:4317", // Jaeger default gRPC endpoint (no http:// prefix for gRPC)
 		OTLP: &option.OTLPOption{
-			ServiceName:    versionInfo.ServiceName, // Use version info for service name
-			ServiceVersion: versionInfo.GitVersion,  // Use actual git version
+			// Basic OTLP configuration
 		},
 	}
 
-	// Create logger with version context
-	coreLogger, err := logger.New(logOption)
+	// Create logger with initial fields already included
+	serviceLogger, err := logger.New(logOption)
 	if err != nil {
 		panic("Failed to initialize logger: " + err.Error())
 	}
@@ -39,14 +45,6 @@ func main() {
 	if logOption.OTLPEndpoint != "" {
 		fmt.Printf("OTLP configured for endpoint: %s (connection may fail if collector is not running)\n", logOption.OTLPEndpoint)
 	}
-
-	// Create a service-specific logger with persistent fields
-	// Note: service.name and service.version are already added by the logger engine
-	// so we only add additional fields here to avoid duplication
-	serviceLogger := coreLogger.With(
-		"commit", versionInfo.GitCommit[:8], // Short commit hash
-		"build_date", versionInfo.BuildDate,
-	)
 
 	r := gin.Default()
 

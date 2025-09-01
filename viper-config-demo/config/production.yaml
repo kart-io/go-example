@@ -21,16 +21,12 @@ logger:
   development: false          # Production mode
   disable_caller: true        # Better performance
   disable_stacktrace: true    # Smaller log size
-  
+
   # Production output paths
   output_paths:
     - "logs/prod.log"         # Main log file
     - "logs/error.log"        # Error logs (if configured separately)
-  
-  # Service information for OTLP
-  service_name: "viper-config-api"
-  service_version: "v1.2.0"
-  
+
   # OTLP configuration for production - now part of logger
   otlp_endpoint: "otel-collector.monitoring.svc.cluster.local:4317"
   otlp:
