@@ -1,0 +1,40 @@
+# Testing Configuration
+# Settings for automated testing and CI/CD
+
+# Server configuration
+server:
+  port: 8084
+  name: "viper-config-demo"
+  environment: "testing"
+
+# Service information
+service:
+  name: "viper-config-api"
+  version: "v1.1.0-test"
+  description: "Testing Viper configuration service"
+
+# Logger configuration - testing optimized
+logger:
+  engine: "slog"              # Standard library for consistency
+  level: "warn"               # Minimal logging for tests
+  format: "json"              # Structured for parsing
+  development: false          # Consistent with production
+  disable_caller: true        # Faster execution
+  disable_stacktrace: true    # Cleaner test output
+  
+  # Testing output paths
+  output_paths:
+    - "logs/test.log"         # Test log file
+  
+  # Service information for OTLP
+  service_name: "viper-config-api"
+  service_version: "v1.1.0-test"
+  
+  # OTLP configuration - disabled for testing, now part of logger
+  otlp_endpoint: "localhost:4317"
+  otlp:
+    enabled: false            # Disable for unit tests
+    endpoint: "localhost:4317"
+    protocol: "grpc"
+    timeout: "1s"
+    insecure: true

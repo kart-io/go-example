@@ -1,0 +1,45 @@
+# Production Configuration
+# Optimized settings for production deployment
+
+# Server configuration
+server:
+  port: 8080
+  name: "viper-config-demo"
+  environment: "production"
+
+# Service information
+service:
+  name: "viper-config-api"
+  version: "v1.2.0"
+  description: "Production Viper configuration service"
+
+# Logger configuration - production optimized
+logger:
+  engine: "zap"               # High-performance engine
+  level: "info"               # Reduced verbosity
+  format: "json"              # Structured logging
+  development: false          # Production mode
+  disable_caller: true        # Better performance
+  disable_stacktrace: true    # Smaller log size
+  
+  # Production output paths
+  output_paths:
+    - "logs/prod.log"         # Main log file
+    - "logs/error.log"        # Error logs (if configured separately)
+  
+  # Service information for OTLP
+  service_name: "viper-config-api"
+  service_version: "v1.2.0"
+  
+  # OTLP configuration for production - now part of logger
+  otlp_endpoint: "otel-collector.monitoring.svc.cluster.local:4317"
+  otlp:
+    enabled: true
+    endpoint: "otel-collector.monitoring.svc.cluster.local:4317"
+    protocol: "grpc"
+    timeout: "5s"
+    insecure: false
+    headers:
+      x-api-key: "${OTLP_API_KEY}"
+      x-environment: "production"
+      x-cluster: "prod-cluster"
